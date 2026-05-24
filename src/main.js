@@ -38,7 +38,29 @@ function handleLoginSuccess(username) {
   currentUser = username;
   
   // 1. Load active board state from storage
-  const boardData = loadBoard(username);
+  let boardData = loadBoard(username);
+  
+  // Check for shared board parameter in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const sharedBoardBase64 = urlParams.get('board');
+  if (sharedBoardBase64) {
+    try {
+      const decodedData = JSON.parse(decodeURIComponent(escape(atob(sharedBoardBase64))));
+      if (decodedData && decodedData.cards) {
+        boardData = decodedData;
+        // Clean up URL so refresh doesn't reload old share
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTimeout(() => {
+          showToast('공유받은 보드를 불러왔습니다! 🔗', 'success');
+        }, 800);
+      }
+    } catch (err) {
+      console.error('Failed to load shared board:', err);
+      setTimeout(() => {
+        showToast('공유 링크가 잘못되었거나 손상되었습니다.', 'error');
+      }, 800);
+    }
+  }
   
   // 2. Initialize Canvas elements
   const viewport = document.getElementById('canvas-viewport');
@@ -139,9 +161,98 @@ function handleSelectionChanged(selectedId) {
       contentGrp.classList.add('hidden');
       imageGrp.classList.add('hidden');
       linkGrp.classList.remove('hidden');
-      document.getElementById('inspect-link-url').value = card.url || '';
-      document.getElementById('inspect-link-desc').value = card.description || '';
-      document.getElementById('inspect-link-img').value = card.previewImage || '';
+      
+      const linksListContainer = document.getElementById('inspector-links-list');
+      linksListContainer.innerHTML = '';
+      
+      if (!card.links || card.links.length === 0) {
+        linksListContainer.innerHTML = `
+          <div style="font-size: 12px; color: var(--color-text-muted); text-align: center; padding: 12px 0;">
+            등록된 링크가 없습니다.
+          </div>
+        `;
+      } else {
+        card.links.forEach((link, idx) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'inspector-link-item';
+          itemDiv.style.cssText = 'border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px; margin-bottom: 8px; background-color: var(--color-canvas-bg);';
+          
+          itemDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 11px; font-weight: bold; color: var(--color-text-secondary);">링크 #${idx + 1} ${link.loading ? '(가져오는 중...)' : ''}</span>
+              <button class="btn-delete-inspector-link" style="background:none; border:none; color:var(--color-text-muted); cursor:pointer; padding:2px;"><i data-lucide="trash-2" style="width: 12px; height: 12px;"></i></button>
+            </div>
+            <div style="margin-bottom: 4px;">
+              <input type="text" class="inspector-link-title-input" value="${link.title || ''}" placeholder="링크 제목" style="width: 100%; font-size: 12px; padding: 4px 6px; border: 1px solid var(--color-border); border-radius: 3px;" ${link.loading ? 'disabled' : ''}>
+            </div>
+            <div>
+              <input type="text" class="inspector-link-url-input" value="${link.url || ''}" placeholder="URL 주소" style="width: 100%; font-size: 11px; padding: 4px 6px; border: 1px solid var(--color-border); border-radius: 3px; font-family: monospace;" ${link.loading ? 'disabled' : ''}>
+            </div>
+          `;
+          
+          // Delete link from inspector
+          itemDiv.querySelector('.btn-delete-inspector-link').addEventListener('click', (e) => {
+            e.stopPropagation();
+            card.links.splice(idx, 1);
+            renderCards();
+            handleBoardChanged(board);
+            handleSelectionChanged(card.id);
+          });
+          
+          // Edit title
+          const titleInput = itemDiv.querySelector('.inspector-link-title-input');
+          titleInput.addEventListener('input', (e) => {
+            link.title = e.target.value;
+            renderCards();
+            handleBoardChanged(board);
+          });
+          
+          // Edit URL (triggers metadata refetch)
+          const urlInput = itemDiv.querySelector('.inspector-link-url-input');
+          urlInput.addEventListener('change', (e) => {
+            const oldUrl = link.url;
+            const newUrl = e.target.value.trim();
+            if (newUrl && newUrl !== oldUrl) {
+              link.url = newUrl;
+              link.title = newUrl.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0] || '새 링크';
+              link.loading = true;
+              renderCards();
+              handleBoardChanged(board);
+              
+              // Refresh inspector to show loading status
+              handleSelectionChanged(card.id);
+              
+              // Import canvas engine to fetch metadata
+              import('./canvas.js').then(m => {
+                m.fetchLinkMetadata(card.id, link.id, newUrl);
+              });
+            }
+          });
+          
+          linksListContainer.appendChild(itemDiv);
+        });
+      }
+      
+      // Quick add link inside inspector
+      const quickAddBtn = document.createElement('button');
+      quickAddBtn.className = 'btn btn-secondary btn-block';
+      quickAddBtn.style.cssText = 'font-size: 12px; padding: 6px; margin-top: 8px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px;';
+      quickAddBtn.innerHTML = '<i data-lucide="plus" style="width:12px; height:12px;"></i> 링크 추가';
+      quickAddBtn.addEventListener('click', () => {
+        const linkId = `link-${Date.now()}`;
+        card.links.push({
+          id: linkId,
+          title: '새 링크',
+          url: 'https://',
+          loading: false
+        });
+        renderCards();
+        handleBoardChanged(board);
+        handleSelectionChanged(card.id);
+      });
+      linksListContainer.appendChild(quickAddBtn);
+      
+      if (window.lucide) window.lucide.createIcons();
     } else if (card.type === 'section') {
       contentGrp.classList.add('hidden');
       imageGrp.classList.add('hidden');
@@ -285,6 +396,34 @@ function setupEventListeners() {
     if (e.target === helpModal) helpModal.classList.add('hidden');
   });
 
+  // Share Board
+  document.getElementById('btn-share').addEventListener('click', async () => {
+    const board = getBoardState();
+    try {
+      const jsonStr = JSON.stringify(board);
+      const utf8Str = unescape(encodeURIComponent(jsonStr));
+      const base64Data = btoa(utf8Str);
+      
+      const shareUrl = window.location.origin + window.location.pathname + '?board=' + encodeURIComponent(base64Data);
+      
+      if (navigator.share) {
+        await navigator.share({
+          title: '하맘캔버스 보드 공유',
+          text: `하맘캔버스에서 작업한 "${board.title || '아이디어 보드'}"를 확인해보세요!`,
+          url: shareUrl
+        });
+        showToast('보드 공유 창을 열었습니다.', 'success');
+      } else {
+        // Copy to clipboard fallback
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('공유 링크가 클립보드에 복사되었습니다! 카카오톡 등에 붙여넣어 보세요. 🔗', 'success');
+      }
+    } catch (err) {
+      console.error('Sharing failed:', err);
+      showToast('공유 링크를 생성하는 도중 오류가 발생했습니다.', 'error');
+    }
+  });
+
   // Export Board
   document.getElementById('btn-export').addEventListener('click', () => {
     if (currentUser) {
@@ -396,49 +535,7 @@ function setupEventListeners() {
     }
   });
 
-  // Link Preview inputs event listeners
-  const inspectLinkUrl = document.getElementById('inspect-link-url');
-  const inspectLinkDesc = document.getElementById('inspect-link-desc');
-  const inspectLinkImg = document.getElementById('inspect-link-img');
-
-  inspectLinkUrl.addEventListener('input', (e) => {
-    const selectedId = document.querySelector('.canvas-card.selected')?.dataset.id;
-    if (!selectedId) return;
-    
-    const board = getBoardState();
-    const card = board.cards.find(c => c.id === selectedId);
-    if (card && card.type === 'link') {
-      card.url = e.target.value.trim();
-      renderCards();
-      handleBoardChanged(board);
-    }
-  });
-
-  inspectLinkDesc.addEventListener('input', (e) => {
-    const selectedId = document.querySelector('.canvas-card.selected')?.dataset.id;
-    if (!selectedId) return;
-    
-    const board = getBoardState();
-    const card = board.cards.find(c => c.id === selectedId);
-    if (card && card.type === 'link') {
-      card.description = e.target.value;
-      renderCards();
-      handleBoardChanged(board);
-    }
-  });
-
-  inspectLinkImg.addEventListener('input', (e) => {
-    const selectedId = document.querySelector('.canvas-card.selected')?.dataset.id;
-    if (!selectedId) return;
-    
-    const board = getBoardState();
-    const card = board.cards.find(c => c.id === selectedId);
-    if (card && card.type === 'link') {
-      card.previewImage = e.target.value.trim();
-      renderCards();
-      handleBoardChanged(board);
-    }
-  });
+  // Link list inputs are now handled dynamically in handleSelectionChanged.
 
   // Color Preset Selectors
   document.querySelectorAll('.color-preset-btn').forEach(btn => {

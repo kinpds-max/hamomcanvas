@@ -126,6 +126,10 @@
       <div class="top-bar-right">
         <!-- Data management buttons -->
         <div class="actions-group">
+          <button id="btn-share" class="action-btn" title="보드 공유하기">
+            <i data-lucide="share-2"></i>
+            <span>공유하기</span>
+          </button>
           <button id="btn-export" class="action-btn" title="데이터 백업 (JSON 내보내기)">
             <i data-lucide="download"></i>
             <span>내보내기</span>
@@ -270,14 +274,10 @@
 
           <!-- Link properties edit (for link/preview cards) -->
           <div class="inspector-group hidden" id="inspect-link-group">
-            <label for="inspect-link-url">링크 주소 (URL)</label>
-            <input type="text" id="inspect-link-url" placeholder="https://example.com">
-            
-            <label for="inspect-link-desc" style="margin-top: 8px;">링크 설명</label>
-            <textarea id="inspect-link-desc" rows="3" placeholder="링크에 대한 설명을 입력하세요..."></textarea>
-            
-            <label for="inspect-link-img" style="margin-top: 8px;">커스텀 썸네일 이미지 URL (선택)</label>
-            <input type="text" id="inspect-link-img" placeholder="https://example.com/thumbnail.jpg">
+            <label>링크 목록 관리</label>
+            <div id="inspector-links-list" class="inspector-links-list">
+              <!-- Dynamically populated links -->
+            </div>
           </div>
 
           <!-- Color palettes preset selection -->

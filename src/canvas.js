@@ -847,24 +847,127 @@ export function renderCards() {
           const item = document.createElement('div');
           item.className = 'link-list-item';
           
-          let hostname = '';
-          try {
-            let tempUrl = link.url;
-            if (!/^https?:\/\//i.test(tempUrl)) tempUrl = 'https://' + tempUrl;
-            hostname = new URL(tempUrl).hostname;
-          } catch(e) {}
+          if (link.loading) {
+            item.innerHTML = `
+              <div class="link-item-left">
+                <span class="link-loading-spinner"></span>
+                <span class="link-item-loading-text" style="font-size: 12px; color: var(--color-text-muted);">정보를 가져오는 중...</span>
+              </div>
+              <button class="btn-delete-link-item" title="링크 삭제"><i data-lucide="x"></i></button>
+            `;
+            
+            // Hover preview in loading state
+            const hoverPreview = document.createElement('div');
+            hoverPreview.className = 'card-hover-preview loading-preview';
+            hoverPreview.innerHTML = `
+              <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--color-text-muted); font-size:12px; gap:8px;">
+                <span class="link-loading-spinner"></span>
+                <span>사이트 정보를 파싱하고 있습니다...</span>
+              </div>
+            `;
+            item.appendChild(hoverPreview);
+          } else {
+            let hostname = '';
+            try {
+              let tempUrl = link.url;
+              if (!/^https?:\/\//i.test(tempUrl)) tempUrl = 'https://' + tempUrl;
+              hostname = new URL(tempUrl).hostname;
+            } catch(e) {}
+            
+            const faviconUrl = hostname ? `https://www.google.com/s2/favicons?sz=32&domain=${hostname}` : '';
+            const finalFaviconUrl = link.logo || faviconUrl;
+            
+            item.innerHTML = `
+              <div class="link-item-left">
+                ${finalFaviconUrl ? `<img src="${finalFaviconUrl}" class="link-item-favicon" alt="icon" onerror="this.src='https://www.google.com/s2/favicons?sz=32&domain=${hostname}'">` : '<i data-lucide="link" class="link-item-icon-fallback" style="width:16px; height:16px;"></i>'}
+                <a href="${/^https?:\/\//i.test(link.url) ? link.url : 'https://' + link.url}" target="_blank" class="link-item-anchor">${link.title}</a>
+              </div>
+              <button class="btn-delete-link-item" title="링크 삭제"><i data-lucide="x"></i></button>
+            `;
+            
+            // Prevent drag when clicking link
+            item.querySelector('.link-item-anchor').addEventListener('mousedown', (e) => e.stopPropagation());
+            
+            // Hover Preview
+            const ytRegex = /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i;
+            const ytMatch = link.url.match(ytRegex);
+            
+            const hoverPreview = document.createElement('div');
+            hoverPreview.className = 'card-hover-preview';
+            
+            let iframeUrl = link.url;
+            if (!/^https?:\/\//i.test(link.url)) {
+              iframeUrl = 'https://' + link.url;
+            }
+            
+            if (ytMatch) {
+              const videoId = ytMatch[1];
+              hoverPreview.innerHTML = `
+                <div class="hover-preview-header" style="display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--color-surface); border-bottom:1px solid var(--color-border); font-size:12px; font-weight:600;">
+                  <i data-lucide="youtube" style="color: #ff0000; width: 14px; height: 14px;"></i>
+                  <span>실시간 유튜브 미리보기</span>
+                </div>
+                <div class="hover-preview-body" style="height:calc(100% - 33px); width:100%;">
+                  <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; border:0;"></iframe>
+                </div>
+              `;
+            } else {
+              const isImage = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(link.url);
+              if (isImage) {
+                hoverPreview.innerHTML = `
+                  <div class="hover-preview-header" style="display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--color-surface); border-bottom:1px solid var(--color-border); font-size:12px; font-weight:600;">
+                    <i data-lucide="image" style="width: 14px; height: 14px;"></i>
+                    <span>이미지 미리보기</span>
+                  </div>
+                  <div class="hover-preview-body image-only" style="display:flex; align-items:center; justify-content:center; height:calc(100% - 33px); background: #000;">
+                    <img src="${iframeUrl}" alt="Preview" style="max-width:100%; max-height:100%; object-fit:contain;" draggable="false">
+                  </div>
+                `;
+              } else if (link.image || link.description) {
+                // Beautiful Open Graph bookmark preview card
+                hoverPreview.innerHTML = `
+                  <div class="hover-preview-bookmark">
+                    ${link.image ? `
+                      <div class="bookmark-preview-image-wrapper">
+                        <img src="${link.image}" alt="Preview" class="bookmark-preview-image" onerror="this.parentNode.style.display='none'">
+                      </div>
+                    ` : ''}
+                    <div class="bookmark-preview-content">
+                      <div class="bookmark-preview-meta">
+                        ${finalFaviconUrl ? `<img src="${finalFaviconUrl}" class="bookmark-preview-favicon" alt="logo" onerror="this.src='https://www.google.com/s2/favicons?sz=32&domain=${hostname}'">` : '<i data-lucide="globe" style="width:12px; height:12px; color:var(--color-text-muted);"></i>'}
+                        <span class="bookmark-preview-host">${hostname}</span>
+                      </div>
+                      <div class="bookmark-preview-title">${link.title}</div>
+                      ${link.description ? `<div class="bookmark-preview-desc">${link.description}</div>` : ''}
+                      <div class="bookmark-preview-footer">
+                        <a href="${iframeUrl}" target="_blank" class="bookmark-preview-go-btn">
+                          <i data-lucide="external-link" style="width:12px; height:12px;"></i> 바로가기
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              } else {
+                // Fallback to standard web preview iframe
+                hoverPreview.innerHTML = `
+                  <div class="hover-preview-header" style="display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--color-surface); border-bottom:1px solid var(--color-border); font-size:12px; font-weight:600;">
+                    <i data-lucide="globe" style="width: 14px; height: 14px;"></i>
+                    <span>웹 페이지 미리보기</span>
+                  </div>
+                  <div class="hover-preview-body" style="position:relative; height:calc(100% - 33px); width:100%;">
+                    <iframe src="${iframeUrl}" frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%; height:100%; border:0;"></iframe>
+                    <div class="iframe-blocked-warning" style="position:absolute; bottom:0; left:0; right:0; background:rgba(20,20,19,0.9); border-top:1px solid var(--color-border); color:var(--color-text-secondary); padding:8px; font-size:11px; text-align:center; pointer-events:none; display:flex; align-items:center; justify-content:center; gap:6px;">
+                      <i data-lucide="info" style="width:12px; height:12px;"></i>
+                      <span>미리보기가 나오지 않을 시 바로가기를 누르세요.</span>
+                    </div>
+                  </div>
+                `;
+              }
+            }
+            item.appendChild(hoverPreview);
+          }
           
-          const faviconUrl = hostname ? `https://www.google.com/s2/favicons?sz=32&domain=${hostname}` : '';
-          
-          item.innerHTML = `
-            <div class="link-item-left">
-              ${faviconUrl ? `<img src="${faviconUrl}" class="link-item-favicon" alt="icon">` : '<i data-lucide="link" class="link-item-icon-fallback" style="width:16px; height:16px;"></i>'}
-              <a href="${/^https?:\/\//i.test(link.url) ? link.url : 'https://' + link.url}" target="_blank" class="link-item-anchor">${link.title}</a>
-            </div>
-            <button class="btn-delete-link-item" title="링크 삭제"><i data-lucide="x"></i></button>
-          `;
-          
-          // Delete link item
+          // Delete link item handler
           item.querySelector('.btn-delete-link-item').addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = card.links.findIndex(l => l.id === link.id);
@@ -872,92 +975,97 @@ export function renderCards() {
               card.links.splice(idx, 1);
               renderCards();
               notifyBoardChanged();
+              // If selected, refresh inspector sidebar
+              if (selectedElementId === card.id) {
+                selectionChangeCallback(card.id);
+              }
             }
           });
           
-          // Prevent drag when clicking link
-          item.querySelector('.link-item-anchor').addEventListener('mousedown', (e) => e.stopPropagation());
-          
-          // Hover Preview
-          const ytRegex = /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i;
-          const ytMatch = link.url.match(ytRegex);
-          
-          const hoverPreview = document.createElement('div');
-          hoverPreview.className = 'card-hover-preview';
-          
-          let iframeUrl = link.url;
-          if (!/^https?:\/\//i.test(link.url)) {
-            iframeUrl = 'https://' + link.url;
-          }
-          
-          if (ytMatch) {
-            const videoId = ytMatch[1];
-            hoverPreview.innerHTML = `
-              <div class="hover-preview-header" style="display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--color-surface); border-bottom:1px solid var(--color-border); font-size:12px; font-weight:600;">
-                <i data-lucide="youtube" style="color: #ff0000; width: 14px; height: 14px;"></i>
-                <span>실시간 유튜브 미리보기</span>
-              </div>
-              <div class="hover-preview-body" style="height:calc(100% - 33px); width:100%;">
-                <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; border:0;"></iframe>
-              </div>
-            `;
-          } else {
-            const isImage = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(link.url);
-            if (isImage) {
-              hoverPreview.innerHTML = `
-                <div class="hover-preview-header" style="display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--color-surface); border-bottom:1px solid var(--color-border); font-size:12px; font-weight:600;">
-                  <i data-lucide="image" style="width: 14px; height: 14px;"></i>
-                  <span>이미지 미리보기</span>
-                </div>
-                <div class="hover-preview-body image-only" style="display:flex; align-items:center; justify-content:center; height:calc(100% - 33px); background: #000;">
-                  <img src="${iframeUrl}" alt="Preview" style="max-width:100%; max-height:100%; object-fit:contain;" draggable="false">
-                </div>
-              `;
-            } else {
-              hoverPreview.innerHTML = `
-                <div class="hover-preview-header" style="display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--color-surface); border-bottom:1px solid var(--color-border); font-size:12px; font-weight:600;">
-                  <i data-lucide="globe" style="width: 14px; height: 14px;"></i>
-                  <span>웹 페이지 미리보기</span>
-                </div>
-                <div class="hover-preview-body" style="position:relative; height:calc(100% - 33px); width:100%;">
-                  <iframe src="${iframeUrl}" frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%; height:100%; border:0;"></iframe>
-                  <div class="iframe-blocked-warning" style="position:absolute; bottom:0; left:0; right:0; background:rgba(20,20,19,0.9); border-top:1px solid var(--color-border); color:var(--color-text-secondary); padding:8px; font-size:11px; text-align:center; pointer-events:none; display:flex; align-items:center; justify-content:center; gap:6px;">
-                    <i data-lucide="info" style="width:12px; height:12px;"></i>
-                    <span>미리보기가 나오지 않을 시 바로가기를 누르세요.</span>
-                  </div>
-                </div>
-              `;
-            }
-          }
-          
-          item.appendChild(hoverPreview);
           listContainer.appendChild(item);
         });
       }
       
+      // Inline link adder form
+      const inlineForm = document.createElement('div');
+      inlineForm.className = 'inline-link-adder hidden';
+      inlineForm.innerHTML = `
+        <input type="text" class="inline-link-input" placeholder="링크 주소(URL)를 입력하세요 (예: naver.com)">
+        <div class="inline-link-buttons">
+          <button class="inline-link-submit-btn" title="추가"><i data-lucide="check" style="width:14px; height:14px;"></i></button>
+          <button class="inline-link-cancel-btn" title="취소"><i data-lucide="x" style="width:14px; height:14px;"></i></button>
+        </div>
+      `;
+      
       const addBtn = document.createElement('button');
       addBtn.className = 'add-link-item-btn';
       addBtn.innerHTML = `<i data-lucide="plus"></i> 링크 추가`;
+      
       addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const url = prompt('추가할 링크 주소(URL)를 입력하세요:');
-        if (url && url.trim()) {
-          let defaultTitle = url.trim().replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
-          const title = prompt('링크 제목을 입력하세요:', defaultTitle);
-          if (title && title.trim()) {
-            card.links.push({
-              id: `link-${Date.now()}`,
-              title: title.trim(),
-              url: url.trim()
-            });
-            renderCards();
-            notifyBoardChanged();
-          }
-        }
+        addBtn.style.display = 'none';
+        inlineForm.classList.remove('hidden');
+        const input = inlineForm.querySelector('.inline-link-input');
+        input.value = '';
+        input.focus();
       });
+      
+      inlineForm.addEventListener('click', (e) => e.stopPropagation());
+      inlineForm.addEventListener('mousedown', (e) => e.stopPropagation());
       addBtn.addEventListener('mousedown', (e) => e.stopPropagation());
       
+      const submitAction = () => {
+        const input = inlineForm.querySelector('.inline-link-input');
+        const urlStr = input.value.trim();
+        if (urlStr) {
+          const linkId = `link-${Date.now()}`;
+          let defaultTitle = urlStr.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0] || '새 링크';
+          
+          card.links.push({
+            id: linkId,
+            title: defaultTitle,
+            url: urlStr,
+            loading: true
+          });
+          
+          renderCards();
+          notifyBoardChanged();
+          // If selected, refresh inspector sidebar to show the loading item
+          if (selectedElementId === card.id) {
+            selectionChangeCallback(card.id);
+          }
+          
+          // Trigger fetch metadata asynchronously
+          fetchLinkMetadata(card.id, linkId, urlStr);
+        } else {
+          inlineForm.classList.add('hidden');
+          addBtn.style.display = 'inline-flex';
+        }
+      };
+      
+      inlineForm.querySelector('.inline-link-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitAction();
+        } else if (e.key === 'Escape') {
+          inlineForm.classList.add('hidden');
+          addBtn.style.display = 'inline-flex';
+        }
+      });
+      
+      inlineForm.querySelector('.inline-link-submit-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        submitAction();
+      });
+      
+      inlineForm.querySelector('.inline-link-cancel-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        inlineForm.classList.add('hidden');
+        addBtn.style.display = 'inline-flex';
+      });
+      
       wrapper.appendChild(listContainer);
+      wrapper.appendChild(inlineForm);
       wrapper.appendChild(addBtn);
       body.appendChild(wrapper);
     }
@@ -1076,4 +1184,65 @@ export function onSelectionChanged(cb) {
 
 function notifyBoardChanged() {
   boardChangeCallback(boardState);
+}
+
+export async function fetchLinkMetadata(cardId, linkId, rawUrl) {
+  let url = rawUrl.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    url = 'https://' + url;
+  }
+  
+  try {
+    const response = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+    if (!response.ok) throw new Error('API fetch failed');
+    const result = await response.json();
+    
+    if (result.status === 'success' && result.data) {
+      const { title, description, image, logo } = result.data;
+      updateLinkItem(cardId, linkId, {
+        title: title || url,
+        description: description || '',
+        image: image ? image.url : null,
+        logo: logo ? logo.url : null,
+        loading: false
+      });
+      return;
+    }
+  } catch (err) {
+    console.error('Metadata fetch error:', err);
+  }
+  
+  // Fallback if scraping fails
+  let hostname = '';
+  try {
+    hostname = new URL(url).hostname;
+  } catch (e) {
+    hostname = url.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
+  }
+  
+  updateLinkItem(cardId, linkId, {
+    title: hostname || '새 링크',
+    loading: false
+  });
+}
+
+export function updateLinkItem(cardId, linkId, updates) {
+  const card = boardState.cards.find(c => c.id === cardId);
+  if (!card || !card.links) return;
+  
+  const link = card.links.find(l => l.id === linkId);
+  if (!link) return;
+  
+  Object.assign(link, updates);
+  
+  // Save state
+  notifyBoardChanged();
+  
+  // Re-render cards
+  renderCards();
+  
+  // Update inspector if selected
+  if (selectedElementId === cardId) {
+    selectionChangeCallback(cardId);
+  }
 }
