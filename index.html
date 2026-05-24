@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>하맘캔버스 - Claude Style Workspace</title>
+  
+  <!-- Google Fonts for Premium Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons for clean, modern interface icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- App Styles -->
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body class="dark-theme">
+  
+  <!-- Toast Notifications -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- AUTHENTICATION SCREEN -->
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-bg-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+    </div>
+    
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="logo">
+          <span class="logo-icon"><i data-lucide="layers"></i></span>
+          <span class="logo-text">하맘캔버스</span>
+        </div>
+        <p class="auth-subtitle">아이디어를 무한한 공간에 시각적으로 정리해보세요.</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">로그인</button>
+        <button id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">회원가입</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form active">
+        <div class="form-group">
+          <label for="login-username">사용자명 (ID)</label>
+          <div class="input-wrapper">
+            <i data-lucide="user" class="input-icon"></i>
+            <input type="text" id="login-username" placeholder="사용자명을 입력하세요" required autocomplete="username">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="login-password">비밀번호</label>
+          <div class="input-wrapper">
+            <i data-lucide="lock" class="input-icon"></i>
+            <input type="password" id="login-password" placeholder="비밀번호를 입력하세요" required autocomplete="current-password">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">
+          <span>로그인</span>
+          <i data-lucide="arrow-right"></i>
+        </button>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="signup-form" class="auth-form">
+        <div class="form-group">
+          <label for="signup-username">새 사용자명 (ID)</label>
+          <div class="input-wrapper">
+            <i data-lucide="user" class="input-icon"></i>
+            <input type="text" id="signup-username" placeholder="사용할 ID를 입력하세요" required autocomplete="username">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="signup-password">비밀번호</label>
+          <div class="input-wrapper">
+            <i data-lucide="lock" class="input-icon"></i>
+            <input type="password" id="signup-password" placeholder="비밀번호를 입력하세요 (6자 이상)" required autocomplete="new-password" minlength="6">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="signup-password-confirm">비밀번호 확인</label>
+          <div class="input-wrapper">
+            <i data-lucide="shield-check" class="input-icon"></i>
+            <input type="password" id="signup-password-confirm" placeholder="비밀번호를 한번 더 입력하세요" required autocomplete="new-password">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">
+          <span>계정 생성하기</span>
+          <i data-lucide="user-plus"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN APPLICATION SHELL -->
+  <div id="app-shell" class="app-shell hidden">
+    
+    <!-- TOP BAR -->
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <div class="app-logo">
+          <span class="logo-icon"><i data-lucide="layers"></i></span>
+          <span class="app-name">하맘캔버스</span>
+        </div>
+        <div class="divider"></div>
+        <div class="board-info">
+          <input type="text" id="board-title-input" value="내 아이디어 보드" title="보드 이름 편집">
+          <span class="save-status"><i data-lucide="cloud-check"></i>저장됨</span>
+        </div>
+      </div>
+
+      <!-- Canvas zoom/pan controls in center -->
+      <div class="top-bar-center">
+        <button id="btn-zoom-out" class="control-btn" title="축소 (Ctrl + Wheel Down)"><i data-lucide="minus"></i></button>
+        <div class="zoom-value-container">
+          <span id="zoom-indicator">100%</span>
+        </div>
+        <button id="btn-zoom-in" class="control-btn" title="확대 (Ctrl + Wheel Up)"><i data-lucide="plus"></i></button>
+        <div class="divider"></div>
+        <button id="btn-zoom-reset" class="control-btn text-btn" title="화면 크기에 맞춤 (Shift + 1)">화면 맞춤</button>
+      </div>
+
+      <div class="top-bar-right">
+        <!-- Data management buttons -->
+        <div class="actions-group">
+          <button id="btn-export" class="action-btn" title="데이터 백업 (JSON 내보내기)">
+            <i data-lucide="download"></i>
+            <span>내보내기</span>
+          </button>
+          <button id="btn-import-trigger" class="action-btn" title="데이터 복원 (JSON 가져오기)">
+            <i data-lucide="upload"></i>
+            <span>가져오기</span>
+          </button>
+          <input type="file" id="import-file-input" accept=".json" style="display: none;">
+        </div>
+        
+        <div class="divider"></div>
+
+        <!-- User info / logout -->
+        <div class="user-profile">
+          <div class="user-avatar" id="user-avatar-char">U</div>
+          <span id="username-display" class="username">User</span>
+          <button id="btn-logout" class="logout-btn" title="로그아웃"><i data-lucide="log-out"></i></button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN INTERACTIVE WORKSPACE -->
+    <div class="workspace-container">
+      
+      <!-- TOOLBAR (LEFT SIDEBAR) -->
+      <nav class="toolbar">
+        <div class="tool-section">
+          <div class="tool-section-title">조작</div>
+          <button id="tool-select" class="tool-btn active" data-tool="select" title="선택 도구 (V)">
+            <i data-lucide="mouse-pointer"></i>
+          </button>
+          <button id="tool-pan" class="tool-btn" data-tool="pan" title="화면 이동 도구 (H - Space 누르고 드래그 가능)">
+            <i data-lucide="hand"></i>
+          </button>
+        </div>
+        
+        <div class="tool-divider"></div>
+        
+        <div class="tool-section">
+          <div class="tool-section-title">카드 생성</div>
+          <button id="tool-add-text" class="tool-btn" data-tool="add-text" title="텍스트 노트 생성">
+            <i data-lucide="file-text"></i>
+          </button>
+          <button id="tool-add-todo" class="tool-btn" data-tool="add-todo" title="할 일 목록(체크리스트) 생성">
+            <i data-lucide="check-square"></i>
+          </button>
+          <button id="tool-add-link" class="tool-btn" data-tool="add-link" title="링크 및 유튜브 카드 생성">
+            <i data-lucide="link-2"></i>
+          </button>
+          <button id="tool-add-image" class="tool-btn" data-tool="add-image" title="이미지 카드 생성 (URL)">
+            <i data-lucide="image"></i>
+          </button>
+          <button id="tool-add-section" class="tool-btn" data-tool="add-section" title="섹션 그룹 생성">
+            <i data-lucide="layout"></i>
+          </button>
+        </div>
+        
+        <div class="tool-divider"></div>
+
+        <div class="tool-section">
+          <div class="tool-section-title">연결</div>
+          <button id="tool-connect" class="tool-btn" data-tool="connect" title="카드 연결선 생성 (C)">
+            <i data-lucide="git-commit"></i>
+          </button>
+        </div>
+
+        <div class="tool-divider"></div>
+        
+        <div class="tool-section bottom-tools">
+          <button id="btn-theme-toggle" class="tool-btn" title="테마 전환 (다크/라이트)">
+            <i data-lucide="moon" class="dark-icon"></i>
+            <i data-lucide="sun" class="light-icon" style="display:none;"></i>
+          </button>
+          <button id="btn-help" class="tool-btn" title="도움말 / 단축키">
+            <i data-lucide="help-circle"></i>
+          </button>
+        </div>
+      </nav>
+
+      <!-- INFINITE CANVAS AREA -->
+      <main id="canvas-viewport" class="canvas-viewport">
+        <!-- Hint panel shown initially or on help -->
+        <div id="canvas-hint" class="canvas-hint">
+          <span class="hint-item"><kbd>Space</kbd> + 드래그: 화면 이동</span>
+          <span class="hint-item"><kbd>Wheel</kbd> 또는 <kbd>Ctrl</kbd> + <kbd>Wheel</kbd>: 확대/축소</span>
+          <span class="hint-item"><kbd>Double Click</kbd>: 새 노트 생성</span>
+        </div>
+
+        <!-- The actual zoomable, pannable element -->
+        <div id="infinite-canvas" class="infinite-canvas">
+          
+          <!-- Dotted grid background pattern inside canvas -->
+          <div class="canvas-grid-overlay"></div>
+
+          <!-- SVG Layer for drawing relation lines between cards -->
+          <svg id="svg-connections-layer" class="connections-layer">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--color-primary)" />
+              </marker>
+              <marker id="arrow-selected" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--color-accent-amber)" />
+              </marker>
+            </defs>
+            <g id="connections-group"></g>
+            <!-- Temporary drawing line -->
+            <path id="temp-connection-line" class="temp-connection-line" d="" style="display:none;"></path>
+          </svg>
+
+          <!-- Cards container (notes, lists, checklists, etc.) -->
+          <div id="cards-container" class="cards-container"></div>
+          
+        </div>
+      </main>
+
+      <!-- CONTEXT INSPECTOR (RIGHT SIDEBAR) -->
+      <aside id="inspector-sidebar" class="inspector-sidebar hidden">
+        <div class="inspector-header">
+          <h3>요소 편집</h3>
+          <button id="btn-close-inspector" class="close-inspector-btn"><i data-lucide="x"></i></button>
+        </div>
+        
+        <div class="inspector-body">
+          <!-- Card title edit -->
+          <div class="inspector-group">
+            <label for="inspect-card-title">제목</label>
+            <input type="text" id="inspect-card-title" placeholder="카드 제목을 입력하세요">
+          </div>
+
+          <!-- Card content edit (textarea for simple cards) -->
+          <div class="inspector-group" id="inspect-content-group">
+            <label for="inspect-card-content">본문 내용</label>
+            <textarea id="inspect-card-content" rows="6" placeholder="내용을 입력하세요..."></textarea>
+          </div>
+          
+          <!-- Image URL edit (for image cards) -->
+          <div class="inspector-group hidden" id="inspect-image-group">
+            <label for="inspect-image-url">이미지 URL</label>
+            <input type="text" id="inspect-image-url" placeholder="https://example.com/image.jpg">
+          </div>
+
+          <!-- Link properties edit (for link/preview cards) -->
+          <div class="inspector-group hidden" id="inspect-link-group">
+            <label for="inspect-link-url">링크 주소 (URL)</label>
+            <input type="text" id="inspect-link-url" placeholder="https://example.com">
+            
+            <label for="inspect-link-desc" style="margin-top: 8px;">링크 설명</label>
+            <textarea id="inspect-link-desc" rows="3" placeholder="링크에 대한 설명을 입력하세요..."></textarea>
+            
+            <label for="inspect-link-img" style="margin-top: 8px;">커스텀 썸네일 이미지 URL (선택)</label>
+            <input type="text" id="inspect-link-img" placeholder="https://example.com/thumbnail.jpg">
+          </div>
+
+          <!-- Color palettes preset selection -->
+          <div class="inspector-group">
+            <label>카드 색상 테마</label>
+            <div class="color-presets">
+              <button class="color-preset-btn active" data-color="slate" style="--preset-bg: var(--preset-bg-slate || var(--color-card-bg-slate)); --preset-border: var(--preset-border-slate || var(--color-card-border-slate));"></button>
+              <button class="color-preset-btn" data-color="amber" style="--preset-bg: var(--preset-bg-amber || var(--color-card-bg-amber)); --preset-border: var(--preset-border-amber || var(--color-card-border-amber));"></button>
+              <button class="color-preset-btn" data-color="rose" style="--preset-bg: var(--preset-bg-rose || var(--color-card-bg-rose)); --preset-border: var(--preset-border-rose || var(--color-card-border-rose));"></button>
+              <button class="color-preset-btn" data-color="sage" style="--preset-bg: var(--preset-bg-sage || var(--color-card-bg-sage)); --preset-border: var(--preset-border-sage || var(--color-card-border-sage));"></button>
+              <button class="color-preset-btn" data-color="indigo" style="--preset-bg: var(--preset-bg-indigo || var(--color-card-bg-indigo)); --preset-border: var(--preset-border-indigo || var(--color-card-border-indigo));"></button>
+            </div>
+          </div>
+
+          <!-- Connection Management -->
+          <div class="inspector-group">
+            <label>연결선 설정</label>
+            <div id="inspector-connections-list" class="inspector-connections-list">
+              <!-- Dynamically populated connections -->
+              <span class="no-connections-text">연결된 다른 카드가 없습니다.</span>
+            </div>
+          </div>
+          
+          <div class="inspector-divider"></div>
+          
+          <!-- Card action buttons -->
+          <div class="inspector-actions">
+            <button id="btn-delete-card" class="btn btn-danger btn-block">
+              <i data-lucide="trash-2"></i>
+              <span>카드 삭제</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- HELP & SHORTCUTS MODAL -->
+  <div id="help-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>하맘캔버스 단축키 & 도움말</h2>
+        <button id="btn-close-help" class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="help-section">
+          <h3><i data-lucide="navigation"></i> 탐색 (Zoom & Pan)</h3>
+          <ul>
+            <li><kbd>Space</kbd> + 마우스 드래그 : 화면이 어디서든 자유롭게 이동합니다.</li>
+            <li><kbd>마우스 휠</kbd> : 화면 확대 / 축소 (마우스 포인터 중심)</li>
+            <li><kbd>Ctrl</kbd> + <kbd>마우스 휠</kbd> : 화면 확대 / 축소 (강제 또는 브라우저 줌 방지 상태)</li>
+            <li><kbd>마우스 휠 버튼 클릭</kbd> + 드래그 : Space 없이 즉시 화면 이동</li>
+            <li><kbd>Shift</kbd> + <kbd>1</kbd> : 모든 카드가 보이게 화면 크기 맞춤 (Zoom to Fit)</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h3><i data-lucide="plus-circle"></i> 카드 생성 및 관리</h3>
+          <ul>
+            <li><kbd>캔버스 더블클릭</kbd> : 더블클릭한 빈 자리에 즉시 새 텍스트 카드 생성</li>
+            <li><kbd>V</kbd> : 선택/이동 도구로 전환</li>
+            <li><kbd>H</kbd> : 화면 이동(Pan) 도구로 전환</li>
+            <li><kbd>C</kbd> : 연결 도구로 전환 (한 카드를 클릭한 뒤 다른 카드를 클릭해 연결)</li>
+            <li><kbd>Delete</kbd> 또는 <kbd>Backspace</kbd> : 선택된 카드 삭제</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h3><i data-lucide="cloud"></i> 로컬 백업 및 보안</h3>
+          <ul>
+            <li>모든 데이터는 브라우저의 <kbd>localStorage</kbd>에 자동 저장되어 새로고침해도 유지됩니다.</li>
+            <li>비밀번호는 안전하게 해시(암호화)되어 저장됩니다.</li>
+            <li>브라우저 초기화에 대비해 <strong style="color: var(--color-accent-amber);">'내보내기'</strong> 버튼으로 데이터를 JSON 파일로 주기적으로 저장할 수 있습니다.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Application Code -->
+  <script type="module" src="/src/main.js"></script>
+
+  <!-- Global fallback for Auth Tab toggling directly in HTML -->
+  <script>
+    window.switchAuthTab = function(tabName) {
+      const loginForm = document.getElementById('login-form');
+      const signupForm = document.getElementById('signup-form');
+      const tabLogin = document.getElementById('tab-login');
+      const tabSignup = document.getElementById('tab-signup');
+      
+      if (tabName === 'login') {
+        loginForm.classList.add('active');
+        signupForm.classList.remove('active');
+        tabLogin.classList.add('active');
+        tabSignup.classList.remove('active');
+      } else {
+        loginForm.classList.remove('active');
+        signupForm.classList.add('active');
+        tabLogin.classList.remove('active');
+        tabSignup.classList.add('active');
+      }
+    }
+  </script>
+</body>
+</html>
