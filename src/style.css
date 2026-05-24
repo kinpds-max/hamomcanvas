@@ -1656,3 +1656,139 @@ input, textarea, button {
     transform: translateX(0);
   }
 }
+
+/* ==========================================================================
+   하맘캔버스 링크 리스트 카드 스타일
+   ========================================================================== */
+
+/* 카드 오버플로우 제한을 풀어 실시간 미리보기가 카드 밖으로 나올 수 있게 변경 */
+.canvas-card {
+  overflow: visible !important;
+}
+
+/* 카드 헤더 라운드 유지 */
+.card-header {
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
+}
+
+.card-link-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.link-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.link-list-item {
+  position: relative; /* 자식인 .card-hover-preview가 이 행 기준으로 배치됨 */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background-color: var(--color-border-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.link-list-item:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-text-muted);
+}
+
+.link-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.link-item-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.link-item-icon-fallback {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.link-item-anchor {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-item-anchor:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.btn-delete-link-item {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.btn-delete-link-item:hover {
+  color: var(--color-accent-rose);
+}
+
+.btn-delete-link-item i {
+  width: 14px;
+  height: 14px;
+}
+
+.add-link-item-btn {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  padding: 4px 0;
+}
+
+.add-link-item-btn:hover {
+  color: var(--color-primary-hover);
+}
+
+.add-link-item-btn i {
+  width: 14px;
+  height: 14px;
+}
+
+/* 각 링크 리스트 아이템에 마우스를 대면 해당 링크의 미리보기가 플로팅 출력됨 */
+.link-list-item:hover .card-hover-preview {
+  display: flex;
+}
