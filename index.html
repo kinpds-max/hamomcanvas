@@ -356,6 +356,41 @@
     </div>
   </div>
 
+  <!-- FLOATING AI ASSISTANT -->
+  <div class="ai-assistant-wrapper">
+    <!-- Floating Button -->
+    <button id="btn-ai-toggle" class="ai-toggle-btn" title="하맘 AI 도우미에게 질문하기">
+      <i data-lucide="sparkles"></i>
+      <span>AI 도우미</span>
+    </button>
+    
+    <!-- Chat Window Dialog -->
+    <div id="ai-chat-window" class="ai-chat-window hidden">
+      <div class="ai-chat-header">
+        <div class="ai-chat-header-title">
+          <i data-lucide="sparkles" style="color: var(--color-primary); width:16px; height:16px;"></i>
+          <span>하맘 AI 도우미</span>
+        </div>
+        <button id="btn-ai-chat-close" class="ai-chat-close-btn"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+      </div>
+      <div class="ai-chat-messages" id="ai-chat-messages">
+        <div class="ai-message ai-message-system">
+          안녕하세요! 하맘캔버스 AI 도우미입니다. 캔버스 사용법이나 연결선 추가 등 궁금한 기능을 물어보세요! ✨
+        </div>
+        <div class="ai-chat-suggestions">
+          <button class="ai-suggestion-btn">연결선은 어떻게 달아?</button>
+          <button class="ai-suggestion-btn">피그마 스타일 섹션 기능은?</button>
+          <button class="ai-suggestion-btn">보드 카카오톡 공유는 어떻게 해?</button>
+          <button class="ai-suggestion-btn">단축키 목록을 보여줘</button>
+        </div>
+      </div>
+      <div class="ai-chat-input-area">
+        <input type="text" id="ai-chat-input" placeholder="궁금한 기능을 질문해 보세요...">
+        <button id="btn-ai-chat-send" class="ai-chat-send-btn" title="전송"><i data-lucide="send" style="width: 14px; height: 14px;"></i></button>
+      </div>
+    </div>
+  </div>
+
   <!-- App Application Code -->
   <script type="module" src="src/main.js"></script>
 

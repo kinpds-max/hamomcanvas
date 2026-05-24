@@ -5,6 +5,7 @@
 
 import { initAuth, showToast } from './auth.js';
 import { saveBoard, loadBoard, exportBoard, importBoard } from './storage.js';
+import { initAI } from './ai.js';
 import {
   initCanvas,
   loadBoardState,
@@ -90,6 +91,9 @@ function handleLoginSuccess(username) {
   setTimeout(() => {
     zoomFit();
   }, 200);
+
+  // 8. Initialize AI assistant chat bot
+  initAI();
 }
 
 /**
